@@ -12,7 +12,7 @@ O sistema coleta, processa e envia dados elétricos em tempo real para um servid
   2. Salve a imagem com o nome "dashboard.png" na mesma pasta deste README.
   3. O GitHub vai carregar a imagem automaticamente aqui embaixo! 👇
 -->
-![Painel de Monitoramento Grafana](Screenshot_20260503_150725.png)
+![Painel de Monitoramento Grafana](/images/Screenshot_20260503_150725.png)
 *Painel de controle exibindo as medições instantâneas e o faturamento blindado acumulado do mês.*
 
 ---
@@ -45,20 +45,22 @@ O ebulidor é uma resistência pura. Ao contrário de motores ou eletrônicos, e
 
 ### Procedimento de Calibração (Passo a Passo)
 
-1.  **Aferição de Referência:** O ebulidor é ligado à rede elétrica passando pelo nosso medidor. Utiliza-se um multímetro True-RMS de bancada confiável para medir a Tensão (V) e a Corrente (A) exatas que estão circulando no momento.
+1.  **Aferição de Referência:** O ebulidor é ligado à rede elétrica passando pelo nosso medidor. Utiliza-se um multímetro True-RMS de bancada confiável (ou alicate amperímetro de precisão) para medir a Tensão (V) e a Corrente (A) exatas que estão circulando no momento.
 2.  **Comportamento Físico Esperado:** Ao ligar a carga pesada (~1000W a 2000W), observa-se imediatamente no painel Grafana:
-    *   Salto instantâneo na Potência Ativa.
+    *   Salto instantâneo na Potência Ativa (W) e na Corrente (A).
     *   "Afundamento" natural da Tensão da rede (queda de alguns volts devido à resistência dos cabos).
     *   Fator de Potência cravado próximo a `1.0`.
-3.  **Envio do Comando de Calibração:** Com a carga ligada e estabilizada, enviamos um comando remoto via aplicativo MQTT (ex: MQTT Explorer) no tópico de controle do medidor:
-    *   Exemplo de Tensão: `CALIB_VA:218.5` (Onde 218.5 é a leitura do multímetro de referência).
-4.  **Processamento Interno:**
-    *   O ESP8266 recebe o comando MQTT e o repassa para o ATMega via Serial (`QCALIB_VA:218.5M`).
+3.  **Envio dos Comandos de Calibração:** Com a carga ligada e estabilizada, enviamos os comandos remotos via aplicativo MQTT (ex: MQTT Explorer) no tópico de controle do medidor. O processo é feito em duas etapas:
+    *   **Calibração de Tensão:** Envia-se o comando `CALIB_VA:218.5` (Onde 218.5 é a leitura de tensão do multímetro).
+    *   **Calibração de Corrente:** Envia-se o comando `CALIB_IA:6.85` (Onde 6.85 é a leitura de corrente do alicate amperímetro).
+4.  **Processamento Interno (ATMega + ATM90E36A):**
+    *   O ESP8266 recebe o comando MQTT puro e o repassa encapsulado para o ATMega via Serial (ex: `QCALIB_VA:218.5M`).
     *   O ATMega desativa temporariamente o *Watchdog Timer* (para evitar reinicializações durante o cálculo).
-    *   O sistema força os registradores do ATM90E36A para o "Ganho Padrão de Fábrica" e realiza `N` leituras brutas em loop (filtrando anomalias).
-    *   Calcula-se a razão entre o **Valor de Referência** e a **Média Bruta Lida** e aplica-se uma regra de três para descobrir o novo Ganho Hexadecimal exato.
-    *   O novo valor de ganho é gravado nos registradores do chip para efeito imediato e salvo na **EEPROM** (Endereços `0` e `2`) para sobreviver a reinicializações.
-5.  **Confirmação:** O sistema responde via MQTT (`{"INFO":"Calibracao VA Salva!"}`) e os gráficos no Grafana passam a refletir o valor exato calibrado.
+    *   Para o canal solicitado (Tensão ou Corrente), o sistema força o registrador do ATM90E36A para o "Ganho Padrão de Fábrica" e realiza `N` leituras brutas em loop (filtrando anomalias).
+    *   Calcula-se a razão matemática entre o **Valor de Referência Informado** e a **Média Bruta Lida** pelo chip.
+    *   Aplica-se uma regra de três para descobrir o novo Ganho Hexadecimal exato, respeitando o limite de 16-bits.
+    *   O novo valor de ganho é gravado nos registradores do chip para efeito imediato e salvo na **EEPROM** (Endereço `0` para Tensão, Endereço `2` para Corrente) para sobreviver a reinicializações físicas.
+5.  **Confirmação:** O sistema responde via MQTT (`{"INFO":"Calibracao VA Salva!"}` ou `{"INFO":"Calibracao IA Salva!"}`) e os gráficos no Grafana passam a refletir os valores exatos calibrados.
 
 ---
 
@@ -69,4 +71,4 @@ O ebulidor é uma resistência pura. Ao contrário de motores ou eletrônicos, e
 *   ArduinoJson (Estruturação de Dados)
 *   Mosquitto (Broker MQTT)
 *   PostgreSQL / TimescaleDB (Time-Series Database)
-*   Grafana (Visualização e Queries SQL Avançadas)
+*   Grafana (Visualização e Queries SQL Avançadas)Screenshot_20260503_150725.png
