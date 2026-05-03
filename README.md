@@ -71,4 +71,4 @@ O ebulidor é uma resistência pura. Ao contrário de motores ou eletrônicos, e
 *   ArduinoJson (Estruturação de Dados)
 *   Mosquitto (Broker MQTT)
 *   PostgreSQL / TimescaleDB (Time-Series Database)
-*   Grafana (Visualização e Queries SQL Avançadas)Screenshot_20260503_150725.png
+*   Grafana (Visualização e Queries SQL Avançadas)
