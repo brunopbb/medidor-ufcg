@@ -12,7 +12,7 @@ O sistema coleta, processa e envia dados elétricos em tempo real para um servid
   2. Salve a imagem com o nome "dashboard.png" na mesma pasta deste README.
   3. O GitHub vai carregar a imagem automaticamente aqui embaixo! 👇
 -->
-![Painel de Monitoramento Grafana](dashboard.png)
+![Painel de Monitoramento Grafana](Screenshot_20260503_150725.png)
 *Painel de controle exibindo as medições instantâneas e o faturamento blindado acumulado do mês.*
 
 ---
