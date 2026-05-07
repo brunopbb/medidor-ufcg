@@ -179,18 +179,30 @@ void loop() {
     I_N /= N_Leituras; FREQ /= N_Leituras;
     S1 /= N_Leituras; S2 /= N_Leituras; S3 /= N_Leituras;
 
-    // --- FILTRO AUTO-ADAPTATIVO (MONOFÁSICO/BIFÁSICO/TRIFÁSICO) ---
-    // Se a fase A não tiver Tensão OU não tiver Corrente, zera todo o lixo elétrico dela
-    if (V_A < 5.0 || I_A < 0.05) { 
+    // FASE A
+    if (V_A < 5.0) { 
+      // Sem tensão = Fase desconectada. Zera tudo.
       V_A = 0; I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; 
+    } 
+    else if (I_A < 0.05) { 
+      // Com tensão, mas sem corrente = Tomada vazia. Mantém a Tensão (V_A)!
+      I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; 
     }
-    // O mesmo para a Fase B (Limpa os pinos flutuantes em rede Monofásica)
-    if (V_B < 5.0 || I_B < 0.05) { 
+
+    // FASE B
+    if (V_B < 5.0) { 
       V_B = 0; I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; 
+    } 
+    else if (I_B < 0.05) { 
+      I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; 
     }
-    // O mesmo para a Fase C
-    if (V_C < 5.0 || I_C < 0.05) { 
+
+    // FASE C
+    if (V_C < 5.0) { 
       V_C = 0; I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; 
+    } 
+    else if (I_C < 0.05) { 
+      I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; 
     }
 
     // Se nenhuma das 3 fases tiver energia, zera a frequência geral
