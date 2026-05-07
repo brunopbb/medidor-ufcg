@@ -179,13 +179,25 @@ void loop() {
     I_N /= N_Leituras; FREQ /= N_Leituras;
     S1 /= N_Leituras; S2 /= N_Leituras; S3 /= N_Leituras;
 
-    // Filtro No-Load
-    if (V_A < 5.0) V_A = 0; if (V_B < 5.0) V_B = 0; if (V_C < 5.0) V_C = 0;
-    if (I_A < 0.1) I_A = 0; if (I_B < 0.1) I_B = 0; if (I_C < 0.1) I_C = 0;
+    // --- FILTRO AUTO-ADAPTATIVO (MONOFÁSICO/BIFÁSICO/TRIFÁSICO) ---
+    // Se a fase A não tiver Tensão OU não tiver Corrente, zera todo o lixo elétrico dela
+    if (V_A < 5.0 || I_A < 0.05) { 
+      V_A = 0; I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; 
+    }
+    // O mesmo para a Fase B (Limpa os pinos flutuantes em rede Monofásica)
+    if (V_B < 5.0 || I_B < 0.05) { 
+      V_B = 0; I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; 
+    }
+    // O mesmo para a Fase C
+    if (V_C < 5.0 || I_C < 0.05) { 
+      V_C = 0; I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; 
+    }
+
+    // Se nenhuma das 3 fases tiver energia, zera a frequência geral
     if (V_A == 0 && V_B == 0 && V_C == 0) FREQ = 0;
 
     StaticJsonDocument<512> doc;
-    doc["ID"] = "MEDIDOR_UFCG";
+    doc["ID"] = "MEDIDOR_UFCG_LABMET";
     doc["P1"] = P1; doc["P2"] = P2; doc["P3"] = P3;
     doc["Q1"] = Q1; doc["Q2"] = Q2; doc["Q3"] = Q3;
     doc["FPA"] = FPA; doc["FPB"] = FPB; doc["FPC"] = FPC;

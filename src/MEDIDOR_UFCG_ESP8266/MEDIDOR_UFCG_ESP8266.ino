@@ -4,7 +4,7 @@
 #include <ESP8266httpUpdate.h>
 #include "secrets.h"
 
-#define FIRMWARE_VERSION "1.0.0" 
+#define FIRMWARE_VERSION "1.0.6" 
 
 const char *SSID = SECRET_SSID;
 const char *PASSWORD = SECRET_PASSWORD;
@@ -12,10 +12,10 @@ const char *BROKER = SECRET_BROKER;
 const char *URL_VERSAO = SECRET_URL_VERSAO;
 const char *URL_FIRMWARE = SECRET_URL_FIRMWARE;
 
-const char *CLIENT_ID = "MEDIDOR_UFCG_CASA_BRUNO";
+const char *CLIENT_ID = "MEDIDOR_UFCG_LABMET";
 const char *TOPIC_PUBLISH = "/UFCG/pwrc/";
 const char *TOPIC_LOG = "/UFCG/pwrc/log";
-const char *TOPIC_SUBSCRIBE = "MEDIDOR_UFCG_CONTROLE";
+const char *TOPIC_SUBSCRIBE = "MEDIDOR_UFCG_CONTROLE_LAB";
 
 String Leitura = "";
 int tentativa;
@@ -59,6 +59,11 @@ void Callback(char* topic, byte * payload, unsigned int length) {
     client.publish(TOPIC_LOG, "Iniciando checagem de OTA...");
     delay(1000);
     checkAndDownloadUpdate();
+  }
+  
+  else if (mensagem.startsWith("QCALIB")) {
+    Serial.print(mensagem); 
+    client.publish(TOPIC_LOG, "Comando de Calibracao repassado ao ATMega...");
   }
   else {
     client.publish(TOPIC_LOG, "MEDIDOR_UFCG_OK");
