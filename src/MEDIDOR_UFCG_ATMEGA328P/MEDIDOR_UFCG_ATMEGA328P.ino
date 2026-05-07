@@ -6,9 +6,13 @@
 
 #define M90_CHIP_SELECT 10
 
-// Endereços na EEPROM para salvar os Ganhos
+// --- NOVOS ENDEREÇOS NA EEPROM (Para as 3 Fases separadas) ---
 #define ADDR_GAIN_UA 0
 #define ADDR_GAIN_IA 2
+#define ADDR_GAIN_UB 4
+#define ADDR_GAIN_IB 6
+#define ADDR_GAIN_UC 8
+#define ADDR_GAIN_IC 10
 
 // --- CONSTANTES ORIGINAIS ---
 #define N 10
@@ -81,16 +85,23 @@ void setup() {
 
   measurementCalibration(START);
 
-  // --- CARREGANDO GANHOS DA EEPROM ---
-  uint16_t gain_UA, gain_IA;
-  EEPROM.get(ADDR_GAIN_UA, gain_UA);
-  EEPROM.get(ADDR_GAIN_IA, gain_IA);
+  // --- CARREGANDO OS 6 GANHOS DA EEPROM ---
+  uint16_t gain_UA, gain_IA, gain_UB, gain_IB, gain_UC, gain_IC;
+  EEPROM.get(ADDR_GAIN_UA, gain_UA); EEPROM.get(ADDR_GAIN_IA, gain_IA);
+  EEPROM.get(ADDR_GAIN_UB, gain_UB); EEPROM.get(ADDR_GAIN_IB, gain_IB);
+  EEPROM.get(ADDR_GAIN_UC, gain_UC); EEPROM.get(ADDR_GAIN_IC, gain_IC);
 
+  // Validação e carregamento de padrão de fábrica se a memória estiver vazia
   if (gain_UA == 0xFFFF || gain_UA == 0) gain_UA = 47751;
   if (gain_IA == 0xFFFF || gain_IA == 0) gain_IA = 12890;
+  if (gain_UB == 0xFFFF || gain_UB == 0) gain_UB = 47751;
+  if (gain_IB == 0xFFFF || gain_IB == 0) gain_IB = 12890;
+  if (gain_UC == 0xFFFF || gain_UC == 0) gain_UC = 47751;
+  if (gain_IC == 0xFFFF || gain_IC == 0) gain_IC = 12890;
 
-  write16(0x61, gain_UA); write16(0x65, gain_UA); write16(0x69, gain_UA);
-  write16(0x62, gain_IA); write16(0x66, gain_IA); write16(0x6A, gain_IA);
+  // Injetando ganhos individualmente no chip metrológico
+  write16(0x61, gain_UA); write16(0x65, gain_UB); write16(0x69, gain_UC);
+  write16(0x62, gain_IA); write16(0x66, gain_IB); write16(0x6A, gain_IC);
   write16(0x6D, 0);       
 
   measurementCalibration(END);
@@ -120,31 +131,71 @@ void loop() {
     if (COMANDO == "QRESETM") {
       delay(500); // Força Watchdog
     }
-    else if (COMANDO.startsWith("QCALIB_VA:")) {
-      String valorStr = COMANDO.substring(10, COMANDO.length() - 1);
-      float refTensao = valorStr.toFloat();
-      
+    
+    // ====================================================================
+    // 1. MODO MONOFÁSICO (Calibra Fase A e Clona para B e C automaticamente)
+    // ====================================================================
+    else if (COMANDO.startsWith("QCALIB_V_ALL:")) {
+      float ref = COMANDO.substring(13, COMANDO.length() - 1).toFloat();
       wdt_disable(); 
-
-      uint16_t novoGanho = measurementGainCalibration(UA, refTensao);
-      EEPROM.put(ADDR_GAIN_UA, novoGanho);
+      uint16_t novoGanho = measurementGainCalibration(UA, ref);
+      EEPROM.put(ADDR_GAIN_UA, novoGanho); EEPROM.put(ADDR_GAIN_UB, novoGanho); EEPROM.put(ADDR_GAIN_UC, novoGanho);
       write16(0x61, novoGanho); write16(0x65, novoGanho); write16(0x69, novoGanho);
-      ESP8266.println("{\"INFO\":\"Calibracao VA Salva!\"}");
-      
+      ESP8266.println("{\"INFO\":\"Calibracao Tensao ALL Salva!\"}");
       wdt_enable(WDTO_250MS); 
     }
-    else if (COMANDO.startsWith("QCALIB_IA:")) {
-      String valorStr = COMANDO.substring(10, COMANDO.length() - 1);
-      float refCorrente = valorStr.toFloat();
-      
+    else if (COMANDO.startsWith("QCALIB_I_ALL:")) {
+      float ref = COMANDO.substring(13, COMANDO.length() - 1).toFloat();
       wdt_disable(); 
-
-      uint16_t novoGanho = measurementGainCalibration(IA, refCorrente);
-      EEPROM.put(ADDR_GAIN_IA, novoGanho);
+      uint16_t novoGanho = measurementGainCalibration(IA, ref);
+      EEPROM.put(ADDR_GAIN_IA, novoGanho); EEPROM.put(ADDR_GAIN_IB, novoGanho); EEPROM.put(ADDR_GAIN_IC, novoGanho);
       write16(0x62, novoGanho); write16(0x66, novoGanho); write16(0x6A, novoGanho);
-      ESP8266.println("{\"INFO\":\"Calibracao IA Salva!\"}");
-      
+      ESP8266.println("{\"INFO\":\"Calibracao Corrente ALL Salva!\"}");
       wdt_enable(WDTO_250MS); 
+    }
+    
+    // ====================================================================
+    // 2. MODO TRIFÁSICO INDIVIDUAL (Calibra Fase por Fase)
+    // ====================================================================
+    
+    // --- TENSÃO (VA, VB, VC) ---
+    else if (COMANDO.startsWith("QCALIB_VA:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(UA, ref);
+      EEPROM.put(ADDR_GAIN_UA, novoGanho); write16(0x61, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao VA Salva!\"}"); wdt_enable(WDTO_250MS); 
+    }
+    else if (COMANDO.startsWith("QCALIB_VB:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(UB, ref);
+      EEPROM.put(ADDR_GAIN_UB, novoGanho); write16(0x65, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao VB Salva!\"}"); wdt_enable(WDTO_250MS); 
+    }
+    else if (COMANDO.startsWith("QCALIB_VC:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(UC, ref);
+      EEPROM.put(ADDR_GAIN_UC, novoGanho); write16(0x69, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao VC Salva!\"}"); wdt_enable(WDTO_250MS); 
+    }
+
+    // --- CORRENTE (IA, IB, IC) ---
+    else if (COMANDO.startsWith("QCALIB_IA:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(IA, ref);
+      EEPROM.put(ADDR_GAIN_IA, novoGanho); write16(0x62, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao IA Salva!\"}"); wdt_enable(WDTO_250MS); 
+    }
+    else if (COMANDO.startsWith("QCALIB_IB:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(IB, ref);
+      EEPROM.put(ADDR_GAIN_IB, novoGanho); write16(0x66, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao IB Salva!\"}"); wdt_enable(WDTO_250MS); 
+    }
+    else if (COMANDO.startsWith("QCALIB_IC:")) {
+      float ref = COMANDO.substring(10, COMANDO.length() - 1).toFloat();
+      wdt_disable(); uint16_t novoGanho = measurementGainCalibration(IC, ref);
+      EEPROM.put(ADDR_GAIN_IC, novoGanho); write16(0x6A, novoGanho);
+      ESP8266.println("{\"INFO\":\"Calibracao IC Salva!\"}"); wdt_enable(WDTO_250MS); 
     }
     
     contador = 0; COMANDO = "";
@@ -180,36 +231,21 @@ void loop() {
     S1 /= N_Leituras; S2 /= N_Leituras; S3 /= N_Leituras;
 
     // FASE A
-    if (V_A < 5.0) { 
-      // Sem tensão = Fase desconectada. Zera tudo.
-      V_A = 0; I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; 
-    } 
-    else if (I_A < 0.05) { 
-      // Com tensão, mas sem corrente = Tomada vazia. Mantém a Tensão (V_A)!
-      I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; 
-    }
+    if (V_A < 5.0) { V_A = 0; I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; } 
+    else if (I_A < 0.05) { I_A = 0; P1 = 0; Q1 = 0; S1 = 0; FPA = 0; }
 
     // FASE B
-    if (V_B < 5.0) { 
-      V_B = 0; I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; 
-    } 
-    else if (I_B < 0.05) { 
-      I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; 
-    }
+    if (V_B < 5.0) { V_B = 0; I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; } 
+    else if (I_B < 0.05) { I_B = 0; P2 = 0; Q2 = 0; S2 = 0; FPB = 0; }
 
     // FASE C
-    if (V_C < 5.0) { 
-      V_C = 0; I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; 
-    } 
-    else if (I_C < 0.05) { 
-      I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; 
-    }
+    if (V_C < 5.0) { V_C = 0; I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; } 
+    else if (I_C < 0.05) { I_C = 0; P3 = 0; Q3 = 0; S3 = 0; FPC = 0; }
 
-    // Se nenhuma das 3 fases tiver energia, zera a frequência geral
     if (V_A == 0 && V_B == 0 && V_C == 0) FREQ = 0;
 
     StaticJsonDocument<512> doc;
-    doc["ID"] = "MEDIDOR_UFCG_LABMET";
+    doc["ID"] = "MEDIDOR_UFCG_LABMET"; // <--- ATENÇÃO AO ID AQUI!
     doc["P1"] = P1; doc["P2"] = P2; doc["P3"] = P3;
     doc["Q1"] = Q1; doc["Q2"] = Q2; doc["Q3"] = Q3;
     doc["FPA"] = FPA; doc["FPB"] = FPB; doc["FPC"] = FPC;
@@ -228,7 +264,7 @@ void loop() {
   wdt_reset(); 
 }
 
-// ***************** FUNÇÕES SECUNDÁRIAS DO ATM90E36A *****************
+// ***************** FUNÇÕES SECUNDÁRIAS DO ATM90E36A (INALTERADAS) *****************
 
 uint16_t read16(uint16_t address) {
   uint16_t readData;
