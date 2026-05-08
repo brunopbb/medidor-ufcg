@@ -6,7 +6,7 @@ O sistema coleta, processa e envia dados elétricos em tempo real para um servid
 
 ## 📸 Visão Geral do Dashboard (Grafana)
 
-![Painel de Monitoramento Grafana](/images/Screenshot_20260503_150725.png)
+![Painel de Monitoramento Grafana](/images/broker.png)
 *Painel de controle exibindo as medições instantâneas e o faturamento blindado acumulado do mês.*
 
 ---
