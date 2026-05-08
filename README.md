@@ -6,7 +6,7 @@ O sistema coleta, processa e envia dados elétricos em tempo real para um servid
 
 ## 📸 Visão Geral do Dashboard (Grafana)
 
-![Painel de Monitoramento Grafana](/images/broker.png)
+![Painel de Monitoramento Grafana](/images/Screenshot_20260503_150725.png)
 *Painel de controle exibindo as medições instantâneas e o faturamento blindado acumulado do mês.*
 
 ---
@@ -21,7 +21,7 @@ O projeto utiliza o princípio de **Desacoplamento de Produtor e Consumidor**:
 
 Toda a comunicação do sistema é baseada em uma arquitetura *Hub-and-Spoke* centrada no Broker Mosquitto. Isso garante que os fluxos de **dados de energia** (leituras) operem de forma completamente paralela e isolada dos fluxos de **comandos remotos** (calibração).
 
-![Diagrama de Topologia MQTT](/images/IoT Medidor Control Pipeline-2026-05-08-135741.png)
+![Diagrama de Topologia MQTT](/images/broker.png)
 *Diagrama de fluxo: Os nós à esquerda atuam como Emissores (Publishers) injetando cargas no Broker central, enquanto os nós à direita atuam como Receptores (Subscribers) escutando tópicos específicos de controle ou consumo.*
 
 ---
